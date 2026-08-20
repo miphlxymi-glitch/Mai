@@ -1,0 +1,75 @@
+-- [[ mai shop - Utility Script ]] --
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+-- ค่าการปรับแต่ง
+local SPEED_BOOST = 100        -- ความเร็วในการวิ่งปกติคือ 16
+local GOD_MODE_HEALTH = 1e6    -- ตั้งค่าพลังชีวิตสูงมากเพื่อจำลองเลือดไม่จำกัด
+
+-- Function: วิ่งเร็ว (Speed Boost)
+local function enableSpeed()
+    local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid.WalkSpeed = SPEED_BOOST
+    end
+end
+
+-- Function: เดินทะลุสิ่งขวาง (Noclip)
+local noclipConnection = nil
+local function enableNoclip()
+    if noclipConnection then return end
+    noclipConnection = RunService.Stepped:Connect(function()
+        local character = LocalPlayer.Character
+        if character then
+            for _, part in pairs(character:GetDescendants()) do
+                if part:IsA("BasePart") and part.CanCollide then
+                    part.CanCollide = false
+                end
+            end
+        end
+    end)
+end
+
+-- Function: เลือดไม่จำกัด (God Mode / Unlimited Health)
+local godModeConnection = nil
+local function enableGodMode()
+    local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid.MaxHealth = GOD_MODE_HEALTH
+        humanoid.Health = GOD_MODE_HEALTH
+        
+        -- คอยเติมเลือดทันทีเมื่อโดนความเสียหาย
+        if not godModeConnection then
+            godModeConnection = humanoid.HealthChanged:Connect(function(health)
+                if health < GOD_MODE_HEALTH then
+                    humanoid.Health = GOD_MODE_HEALTH
+                end
+            end)
+        end
+    end
+end
+
+-- เริ่มการทำงานของสคริปต์เมื่อตัวละครเกิด
+local function initMaiShop()
+    print("mai shop script loaded successfully!")
+    enableSpeed()
+    enableNoclip()
+    enableGodMode()
+end
+
+-- รองรับการทำงานใหม่เมื่อตัวละครเกิดใหม่ (Respawn)
+LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(1) -- รอให้โมเดลตัวละครโหลดครบ
+    if godModeConnection then
+        godModeConnection:Disconnect()
+        godModeConnection = nil
+    end
+    initMaiShop()
+end)
+
+-- เรียกใช้งานครั้งแรก
+initMaiShop()
